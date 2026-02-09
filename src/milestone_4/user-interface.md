@@ -1,28 +1,28 @@
-# User Interface
+# 用户界面
 
-After introducing swap paths, we can significantly simplify the internals of our web app. First of all, every swap now uses a path since a path doesn't have to contain multiple pools. Second, it's now easier to change the direction of a swap: we can simply reverse the path. And, thanks to the unified pool address generation via `CREATE2` and unique salts, we no longer need to store pool addresses and care about token orders.
+在介绍了 swap 路径之后，我们可以显著简化我们的 web 应用程序的内部结构。首先，现在每个 swap 都使用一个路径，因为一个路径不必包含多个池子。其次，现在更容易改变 swap 的方向：我们可以简单地反转路径。而且，由于通过 `CREATE2` 和唯一 salts 实现了统一的池地址生成，我们不再需要存储池地址和关心 token 的顺序。
 
-However, we cannot integrate multi-pool swaps in the web app without adding one crucial algorithm. Ask yourself the question: "How to find a path between two tokens that don't have a pool?"
+但是，如果不添加一个关键的算法，我们就无法在 web 应用程序中集成多池 swap。问自己一个问题：“如何在两个没有池子的 token 之间找到一条路径？”
 
 ## AutoRouter
 
-Uniswap implements what's called *AutoRouter*, an algorithm that finds the shortest path between two tokens. Moreover, it also splits one payment into multiple smaller payments to find the best average exchange rate. The profit can be as big as [36.84% compared to trades that are not split](https://uniswap.org/blog/auto-router-v2). This sounds great, however, we're not going to build such an advanced algorithm. Instead, we'll build something simpler.
+Uniswap 实现了所谓的 *AutoRouter*，这是一种寻找两个 token 之间最短路径的算法。此外，它还将一笔支付分成多个较小的支付，以找到最佳的平均汇率。与不进行拆分的交易相比，利润可以高达 [36.84%](https://uniswap.org/blog/auto-router-v2)。这听起来很棒，但是，我们不会构建如此高级的算法。相反，我们将构建更简单的东西。
 
-## A Simple Router Design
+## 一个简单的 Router 设计
 
-Suppose we have a whole bunch of pools:
+假设我们有一大堆池子：
 
-![Scattered pools](images/pools_scattered.png)
+![分散的池子](images/pools_scattered.png)
 
-How do we find the shortest path between two tokens in such a mess?
+我们如何在这种混乱中找到两个 token 之间的最短路径？
 
-The most suitable solution for such kinds of tasks is based on a *graph*. A graph is a data structure that consists of nodes (objects representing something) and edges (links connecting nodes). We can turn that mess of pools into a graph where each node is a token (that has a pool) and each edge is a pool this token belongs to. So a pool represented as a graph is two nodes connected with an edge. The above pools become this graph:
+对于这种类型的任务，最合适的解决方案是基于 *图*。图是一种数据结构，由节点（代表某些东西的对象）和边（连接节点的链接）组成。我们可以将这些混乱的池子变成一个图，其中每个节点是一个 token（拥有一个池子），每条边是该 token 所属的池子。因此，一个表示为图的池子是两个用一条边连接的节点。上面的池子变成了这张图：
 
-![Pools graph](images/pools_graph.png)
+![池子图](images/pools_graph.png)
 
-The biggest advantage graphs give us is the ability to traverse its nodes, from one node to another, to find paths. Specifically, we'll use [A* search algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm). Feel free to learn about how the algorithm works, but, in our app, we'll use a library to make our life easier. The set of libraries we'll use is [ngraph.ngraph](https://github.com/anvaka/ngraph.graph) for building graphs and [ngraph.path](https://github.com/anvaka/ngraph.path) for finding paths (it's the latter that implements A* search algorithm, as well as some others).
+图给我们的最大优势是能够遍历其节点，从一个节点到另一个节点，以找到路径。具体来说，我们将使用 [A* 搜索算法](https://en.wikipedia.org/wiki/A*_search_algorithm)。可以随意了解该算法的工作原理，但是，在我们的应用程序中，我们将使用一个库来简化我们的生活。我们将使用 [ngraph.ngraph](https://github.com/anvaka/ngraph.graph) 来构建图，并使用 [ngraph.path](https://github.com/anvaka/ngraph.path) 来查找路径（后者实现了 A* 搜索算法以及其他一些算法）。
 
-In the UI app, let's create a pathfinder. This will be a class that, when instantiated, turns a list of pairs into a graph to later use the graph to find the shortest path between two tokens.
+在 UI 应用程序中，让我们创建一个路径查找器。这将是一个类，实例化后，它会将一对对列表转换为图，以便以后使用该图来查找两个 token 之间的最短路径。
 ```javascript
 import createGraph from 'ngraph.graph';
 import path from 'ngraph.path';
@@ -44,9 +44,9 @@ class PathFinder {
   ...
 ```
 
-In the constructor, we're creating an empty graph and fill it with linked nodes. Each node is a token address and links have associated data, which is tick spacings–we'll be able to extract this information from paths found by A*. After initializing a graph, we instantiate the A* algorithm implementation.
+在构造函数中，我们创建了一个空图，并用链接的节点填充它。每个节点都是一个 token 地址，并且链接具有关联的数据，即 tick 间距 —— 我们将能够从 A* 找到的路径中提取此信息。初始化图后，我们实例化 A* 算法的实现。
 
-Next, we need to implement a function that will find a path between tokens and turn it into an array of token addresses and tick spacings:
+接下来，我们需要实现一个函数，该函数将找到 token 之间的路径，并将其转换为 token 地址和 tick 间距的数组：
 
 ```javascript
 findPath(fromToken, toToken) {
@@ -62,6 +62,6 @@ findPath(fromToken, toToken) {
 }
 ```
 
-`this.finder.find(fromToken, toToken)` returns a list of nodes and, unfortunately, doesn't contain the information about edges between them (we store tick spacings in edges). Thus, we're calling `this.graph.getLink(previousNode, currentNode)` to find edges.
+`this.finder.find(fromToken, toToken)` 返回一个节点列表，但不幸的是，不包含有关它们之间边的信息（我们将 tick 间距存储在边中）。因此，我们调用 `this.graph.getLink(previousNode, currentNode)` 来查找边。
 
-Now, whenever the user changes the input or output token, we can call `pathFinder.findPath(token0, token1)` to build a new path.
+现在，每当用户更改输入或输出 token 时，我们都可以调用 `pathFinder.findPath(token0, token1)` 来构建一条新路径。

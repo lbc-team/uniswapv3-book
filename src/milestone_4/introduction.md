@@ -1,22 +1,21 @@
-# Multi-Pool Swaps
+# 多 Pool 交易
 
-After implementing cross-tick swaps, we've got close to real Uniswap V3 swaps. One significant limitation of our implementation is that it allows only swaps within a pool–if there's no pool for a pair of tokens, then swapping between these tokens is not possible. This is not so in Uniswap since it allows multi-pool swaps. In this chapter, we're going to add multi-pool swaps to our implementation.
+在实现了跨 tick 交易之后，我们已经非常接近真实的 Uniswap V3 交易了。我们实现的一个重要限制是，它只允许在 pool 内部进行交易——如果没有一对 token 的 pool，那么在这些 token 之间进行交易是不可能的。但在 Uniswap 中并非如此，因为它允许多 pool 交易。在本章中，我们将向我们的实现中添加多 pool 交易。
 
-Here's the plan:
+以下是计划：
 
-1. first, we'll learn about and implement the Factory contract;
-1. then, we'll see how chained or multi-pool swaps work and implement the Path library;
-1. then, we'll update the front-end app to support multi-pool swaps;
-1. we'll implement a basic router that finds a path between two tokens;
-1. along the way, we'll also learn about tick spacing which is a way of optimizing swaps.
+1. 首先，我们将学习并实现 Factory 合约；
+2. 然后，我们将了解链式或多 pool 交易如何工作，并实现 Path 库；
+3. 接着，我们将更新前端应用以支持多 pool 交易；
+4. 我们将实现一个基本的路由器，用于查找两个 token 之间的路径；
+5. 一路上，我们还将了解 tick 间距，这是一种优化交易的方式。
 
+完成本章后，我们的实现将能够处理多 pool 交易，例如，通过不同的稳定币将 WBTC 兑换为 WETH：WETH → USDC → USDT → WBTC。
 
-After finishing this chapter, our implementation will be able to handle multi-pool swaps, for example, swapping WBTC for WETH via different stablecoins: WETH → USDC → USDT → WBTC.
+让我们开始吧！
 
-Let's begin!
-
-> You'll find the complete code of this chapter in [this Github branch](https://github.com/Jeiwan/uniswapv3-code/tree/milestone_4).
+> 您可以在 [这个 Github 分支](https://github.com/Jeiwan/uniswapv3-code/tree/milestone_4) 中找到本章的完整代码。
 >
-> This milestone introduces a lot of code changes in existing contracts. [Here you can see all changes since the last milestone](https://github.com/Jeiwan/uniswapv3-code/compare/milestone_3...milestone_4)
+> 此里程碑在现有合约中引入了许多代码更改。[在这里您可以看到自上次里程碑以来的所有更改](https://github.com/Jeiwan/uniswapv3-code/compare/milestone_3...milestone_4)
 
-> If you have any questions feel free to ask them in [the GitHub Discussion of this milestone](https://github.com/Jeiwan/uniswapv3-book/discussions/categories/milestone-4-multi-pool-swaps)!
+> 如果您有任何问题，请随时在 [此里程碑的 GitHub 讨论区](https://github.com/Jeiwan/uniswapv3-book/discussions/categories/milestone-4-multi-pool-swaps) 中提出！

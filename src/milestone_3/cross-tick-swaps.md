@@ -1,39 +1,38 @@
-# Cross-Tick Swaps
+# 跨 Tick 交易
 
-Cross-tick swaps are probably the most advanced feature of Uniswap V3. Luckily, we have already implemented almost everything we need to make cross-tick swaps. Let's see how cross-tick swaps work before implementing them.
+跨 tick 交易可能是 Uniswap V3 最先进的功能。幸运的是，我们已经实现了几乎所有我们需要实现跨 tick 交易的功能。在实现代码之前，让我们先看看跨 tick 交易是如何工作的。
 
-## How Cross-Tick Swaps Work
+## 跨 Tick 交易如何工作
 
-A common Uniswap V3 pool is a pool with many overlapping (and outstanding) price ranges. Each pool tracks current $\sqrt{P}$ and tick. When users swap tokens they move the current price and tick to the left or the right, depending on the swap direction. These movements are caused by tokens being added and removed from pools during swaps.
+一个常见的 Uniswap V3 池是一个具有许多重叠（和突出）价格范围的池。每个池跟踪当前的 $\sqrt{P}$ 和 tick。当用户交换代币时，他们会根据交换方向，将当前价格和 tick 向左或向右移动。这些移动是由交换期间添加到池中和从池中移除的代币引起的。
 
-Pools also track $L$ (`liquidity` variable in our code), which is **the total liquidity provided by all price ranges that include the current price**. It's expected that, during big price moves, the current price moves outside of price ranges. When this happens, such price ranges become inactive and their liquidity gets subtracted from $L$. On the other hand, when the current price enters a price range, $L$ is increased and the price range gets activated.
+池也跟踪 $L$（我们代码中的 `liquidity` 变量），它是**包含当前价格的所有价格范围提供的总流动性**。可以预见的是，在大的价格变动期间，当前价格会移动到价格范围之外。当这种情况发生时，这些价格范围会变为不活跃，并且它们的流动性会从 $L$ 中减去。另一方面，当当前价格进入一个价格范围时，$L$ 会增加，并且该价格范围会激活。
 
-Let's analyze this illustration:
+让我们分析一下这个图示：
 
-![The dynamic of price ranges](images/price_range_dynamics.png)
+![价格范围的动态](images/price_range_dynamics.png)
 
-There are three price ranges on this image. The top one is the one currently engaged, it includes the current price. The liquidity of this price range is set to the `liquidity` state variable of the Pool contract.
+此图中有三个价格范围。最上面的一个（top one）是当前正在使用的，它包含当前价格。此价格范围的流动性设置为 Pool 合约的 `liquidity` 状态变量。
 
-If we buy all the ETH from the top price range, the price will increase and we'll move to the right price range, which at this moment contains only ETH, not USDC. We might stop in this price range if there's enough liquidity to satisfy our demand.  In this case, the `liquidity` variable will contain only the liquidity provided by this price range. If we continue buying ETH and deplete the right price range, we'll need another price range that's to the right of this price range. If there are no more price ranges, we'll have to stop, and our swap will be satisfied only partially.
+如果我们从最上面的价格范围购买所有 ETH，价格将会上涨，并且我们将移动到右边的价格范围，此时此价格范围只包含 ETH，不包含 USDC。如果此价格范围有足够的流动性来满足我们的需求，我们可能会在此价格范围停止。在这种情况下，`liquidity` 变量将只包含此价格范围提供的流动性。如果我们继续购买 ETH 并耗尽最右边的价格范围，我们将需要另一个位于此价格范围右侧的价格范围。如果没有更多价格范围，我们将不得不停止，并且我们的交易将只会被部分满足。
 
-If we buy all the USDC from the top price range (and sell ETH), the price will decrease and we'll move to the left price range–at this moment it contains only USDC. If we deplete it, we'll need another price range to the left of it.
+如果我们从最上面的价格范围购买所有 USDC（并出售 ETH），价格将会下降，并且我们将移动到左边的价格范围——此时它只包含 USDC。如果我们耗尽了它，我们将需要另一个位于其左侧的价格范围。
 
-The current price moves during swapping. It moves from one price range to another, but it must always stay within a price range–otherwise, trading is not possible.
+当前价格在交易期间移动。它从一个价格范围移动到另一个价格范围，但它必须始终保持在一个价格范围内——否则，交易是不可能的。
 
-Of course, price ranges can overlap, so, in practice, the transition between price ranges is seamless. And it's not possible to hop over a gap–a swap would be completed partially. It's also worth noting that, in the areas where price ranges overlap, price moves slower. This is because supply is higher in such areas and the effect of demand is lower (recall from the introduction that high demand with low supply increases the price).
+当然，价格范围可以重叠，因此，在实践中，价格范围之间的过渡是无缝的。并且不可能跳过一个缺口——交易会被部分完成。同样值得注意的是，在价格范围重叠的区域，价格移动得较慢。这是因为在这些区域供应量较高，需求的影响较小（回顾一下介绍部分，低供应量下的高需求会提高价格）。
 
-Our current implementation doesn't support such fluidity: we only allow swaps within one active price range. This is what we're going to improve now.
+我们当前的实现不支持这种流动性：我们只允许在一个活跃的价格范围内进行交易。这就是我们现在要改进的地方。
 
-## Updating the `computeSwapStep` Function
+## 更新 `computeSwapStep` 函数
 
-In the `swap` function, we're iterating over initialized ticks (that is, ticks with liquidity) to fill the amount the user has requested. In each iteration, we:
+在 `swap` 函数中，我们正在迭代已初始化的 tick（即具有流动性的 tick）来填充用户请求的数量。在每次迭代中，我们：
 
-1. find the next initialized tick using `tickBitmap.nextInitializedTickWithinOneWord`;
-1. swap in the range between the current price and the next initialized tick (using `SwapMath.computeSwapStep`);
-1. always expect that the current liquidity is enough to satisfy the swap (i.e. the price after a swap is between the current
-price and the next initialized tick).
+1. 使用 `tickBitmap.nextInitializedTickWithinOneWord` 找到下一个已初始化的 tick；
+2. 在当前价格和下一个已初始化的 tick 之间的范围内进行交易（使用 `SwapMath.computeSwapStep`）；
+3. 始终期望当前的流动性足以满足交易（即，交易后的价格位于当前价格和下一个已初始化的 tick 之间）。
 
-But what happens if the third step is not true? We have this scenario covered in tests:
+但是，如果第三步不成立会发生什么？我们在测试中涵盖了这种情况：
 ```solidity
 // test/UniswapV3Pool.t.sol
 function testSwapBuyEthNotEnoughLiquidity() public {
@@ -48,7 +47,7 @@ function testSwapBuyEthNotEnoughLiquidity() public {
 }
 ```
 
-The "Arithmetic over/underflow" happens when the pool tries to send us more ether than it has. This error happens because, in our current implementation, we always expect that there's enough liquidity to satisfy any swap:
+当池试图发送给我们比它拥有的更多的 ether 时，会发生“算术上溢/下溢”。发生此错误是因为，在我们当前的实现中，我们始终期望有足够的流动性来满足任何交易：
 
 ```solidity
 // src/lib/SwapMath.sol
@@ -67,11 +66,11 @@ function computeSwapStep(...) {
 }
 ```
 
-To improve this, we need to consider several situations:
-1. when the range between the current and the next ticks has enough liquidity to fill `amountRemaining`;
-1. when the range doesn't fill the entire `amountRemaining`.
+为了改进这一点，我们需要考虑几种情况：
+1. 当前 tick 和下一个 tick 之间的范围有足够的流动性来填充 `amountRemaining` 时；
+2. 该范围不能填充整个 `amountRemaining` 时。
 
-In the first case, the swap is done entirely within the range–this is the scenario we have implemented. In the second situation, we'll consume the whole liquidity provided by the range and **will move to the next range** (if it exists). With this in mind, let's rework `computeSwapStep`:
+在第一种情况下，交易完全在范围内完成——这是我们已经实现的场景。在第二种情况下，我们将消耗该范围提供的所有流动性，并且**将移动到下一个范围**（如果存在）。考虑到这一点，让我们重新构建 `computeSwapStep`：
 ```solidity
 // src/lib/SwapMath.sol
 function computeSwapStep(...) {
@@ -109,17 +108,17 @@ function computeSwapStep(...) {
     );
 }
 ```
-First, we calculate `amountIn`–the input amount the current range can satisfy. If it's smaller than `amountRemaining`, we say that the current price range cannot fulfill the whole swap, thus the next $\sqrt{P}$ is the upper/lower $\sqrt{P}$ of the price range (in other words, we use the entire liquidity of the price range). If `amountIn` is greater than `amountRemaining`, we compute `sqrtPriceNextX96`–it'll be a price within the current price range.
+首先，我们计算 `amountIn`——当前范围可以满足的输入量。如果它小于 `amountRemaining`，我们说当前价格范围无法满足整个交易，因此下一个 $\sqrt{P}$ 是价格范围的上限/下限 $\sqrt{P}$（换句话说，我们使用整个价格范围的流动性）。如果 `amountIn` 大于 `amountRemaining`，我们计算 `sqrtPriceNextX96`——它将是当前价格范围内的价格。
 
-In the end, after figuring out the next price, we re-compute `amountIn` and compute `amountOut` within this shorter price range (we don't consume the entire liquidity).
+最后，在确定了下一个价格之后，我们重新计算 `amountIn` 并在较短的价格范围内计算 `amountOut`（我们不消耗整个流动性）。
 
-I hope this makes sense!
+我希望这说得通！
 
-## Updating the `swap` Function
+## 更新 `swap` 函数
 
-Now, in the `swap` function, we need to handle the case we introduced in the previous part: when the swap price reaches a boundary of a price range. When this happens, we want to deactivate the price range we're leaving and activate the next price range.  We also want to start another iteration of the loop and try to find another tick with liquidity.
+现在，在 `swap` 函数中，我们需要处理我们在上一部分中介绍的情况：当交易价格达到价格范围的边界时。当这种情况发生时，我们想要停用我们离开的价格范围并激活下一个价格范围。我们还想开始循环的另一次迭代，并尝试找到另一个具有流动性的 tick。
 
-Before updating the loop, let's save the second value returned by the `tickBitmap.nextInitializedTickWithinOneWord()` call into `step.initialized`:
+在更新循环之前，让我们将 `tickBitmap.nextInitializedTickWithinOneWord()` 调用返回的第二个值保存到 `step.initialized` 中：
 ```solidity
 (step.nextTick, step.initialized) = tickBitmap.nextInitializedTickWithinOneWord(
     state.tick,
@@ -128,11 +127,11 @@ Before updating the loop, let's save the second value returned by the `tickBitma
 );
 ```
 
-(In the previous milestone we stored only `step.nextTick`.)
+（在之前的里程碑中，我们只存储了 `step.nextTick`。）
 
-Knowing if the next tick is initialized or not will help us save some gas in situations when there's no initialized tick in the current word in the ticks bitmap.
+知道下一个 tick 是否被初始化将帮助我们在 ticks 位图中的当前 word 中没有已初始化的 tick 时节省一些 gas。
 
-Now, here's what we need to add to the end of the loop:
+现在，这是我们需要添加到循环末尾的内容：
 ```solidity
 if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
     if (step.initialized) {
@@ -154,28 +153,28 @@ if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
 }
 ```
 
-The second branch is what we had before–it handles the case when the current price stays within the range. So let's focus on the first one.
+第二个分支是我们之前拥有的——它处理当前价格保持在范围内的这种情况。因此，让我们关注第一个分支。
 
-Here, we're updating the current liquidity, but only if the next tick is initialized (if it's not, we skip adding 0 to the liquidity to save gas).
+在这里，我们正在更新当前流动性，但仅当下一个 tick 已初始化时（如果未初始化，我们跳过向流动性添加 0 以节省 gas）。
 
-`state.sqrtPriceX96` is the new current price, i.e. the price that will be set after the current swap; `step.sqrtPriceNextX96` is the price at the next initialized tick. If these are equal, we have reached a price range boundary. As explained above, when this happens, we want to update $L$ (add or remove liquidity) and continue the swap using the boundary tick as the current tick.
+`state.sqrtPriceX96` 是新的当前价格，即将在当前交易之后设置的价格；`step.sqrtPriceNextX96` 是下一个已初始化 tick 的价格。如果这些相等，我们已经达到了价格范围边界。如上所述，当这种情况发生时，我们想要更新 $L$（添加或移除流动性），并使用边界 tick 作为当前 tick 继续进行交易。
 
-By convention, crossing a tick means crossing it from left to right. Thus, crossing lower ticks always adds liquidity, and crossing upper ticks always removes it. However, when `zeroForOne` is true, we negate the sign: when the price goes down (token $x$ is being sold), upper ticks add liquidity and lower ticks remove it.
+按照惯例，跨越一个 tick 意味着从左到右跨越它。因此，跨越较低的 tick 总是增加流动性，而跨越较高的 tick 总是移除流动性。但是，当 `zeroForOne` 为 true 时，我们否定符号：当价格下降（代币 $x$ 正在出售）时，较高的 tick 增加流动性，而较低的 tick 移除流动性。
 
-When updating `state.tick`, if the price moves down (`zeroForOne` is true), we need to subtract 1 to step out of the price range. When moving up (`zeroForOne` is false), the current tick is always excluded in `TickBitmap.nextInitializedTickWithinOneWord`.
+当更新 `state.tick` 时，如果价格下降（`zeroForOne` 为 true），我们需要减去 1 以退出价格范围。当向上移动（`zeroForOne` 为 false）时，当前 tick 始终在 `TickBitmap.nextInitializedTickWithinOneWord` 中排除。
 
-Another small, but very important, change that we need to make is to update $L$ when crossing a tick. We do this after the loop:
+我们需要做的另一个小的，但非常重要的更改是在跨越 tick 时更新 $L$。我们在循环之后执行此操作：
 ```solidity
 if (liquidity_ != state.liquidity) liquidity = state.liquidity;
 ```
 
-Within the loop, we update `state.liquidity` multiple times when entering/leaving price ranges. After a swap, we need to update the global $L$ for it to reflect the liquidity available at the new current price. Also, the reason why we only update the global variable when finishing the swap is gas consumption optimization, since writing to the storage of a contract is an expensive operation.
+在循环中，当进入/离开价格范围时，我们会多次更新 `state.liquidity`。在交易之后，我们需要更新全局 $L$，以使其反映新当前价格可用的流动性。此外，我们仅在完成交易时才更新全局变量的原因是 gas 消耗优化，因为写入合约的存储空间是一项昂贵的操作。
 
-## Liquidity Tracking and Ticks Crossing
+## 流动性跟踪和 Ticks 跨越
 
-Let's now look at the updated `Tick` library.
+现在让我们看一下更新后的 `Tick` 库。
 
-The first change is in the `Tick.Info` structure: we now have two variables to track tick liquidity:
+第一个更改是在 `Tick.Info` 结构中：我们现在有两个变量来跟踪 tick 流动性：
 ```solidity
 struct Info {
     bool initialized;
@@ -186,9 +185,9 @@ struct Info {
 }
 ```
 
-`liquidityGross` tracks the absolute liquidity amount of a tick. It's needed to find if a tick was flipped or not. `liquidityNet`, on the other hand, is a signed integer–it tracks the amount of liquidity added (in case of lower tick) or removed (in case of upper tick) when a tick is crossed.
+`liquidityGross` 跟踪一个 tick 的绝对流动性数量。需要它来查找一个 tick 是否被翻转。另一方面，`liquidityNet` 是一个有符号的整数——它跟踪跨越一个 tick 时添加（在较低的 tick 的情况下）或移除（在较高的 tick 的情况下）的流动性数量。
 
-`liquidityNet` is set in the `update` function:
+`liquidityNet` 在 `update` 函数中设置：
 ```solidity
 function update(
     mapping(int24 => Tick.Info) storage self,
@@ -204,7 +203,7 @@ function update(
 }
 ```
 
-The `cross` function we saw above simply returns `liquidityNet` (it'll get more complicated after we introduce new features in later milestones):
+我们在上面看到的 `cross` 函数只是返回 `liquidityNet`（在我们稍后的里程碑中引入新功能后，它会变得更加复杂）：
 ```solidity
 function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
     internal
@@ -216,19 +215,19 @@ function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
 }
 ```
 
-## Testing
+## 测试
 
-Let's review different liquidity setups and test them to ensure our pool implementation can handle them correctly.
+让我们回顾不同的流动性设置并对其进行测试，以确保我们的池实现可以正确处理它们。
 
-### One Price Range
+### 一个价格范围
 
-![Swap within price range](images/swap_within_price_range.png)
+![在价格范围内交易](images/swap_within_price_range.png)
 
-This is the scenario we had earlier. After we have updated the code, we need to ensure old functionality keeps working correctly.
+这是我们之前的情况。在更新代码后，我们需要确保旧功能保持正常工作。
 
-> For brevity, I'll show only the most important parts of the tests. You can find full tests in [the code repo](https://github.com/Jeiwan/uniswapv3-code/blob/milestone_3/test/UniswapV3Pool.Swaps.t.sol).
+> 为了简洁起见，我将仅显示测试的最重要部分。你可以在[代码仓库](https://github.com/Jeiwan/uniswapv3-code/blob/milestone_3/test/UniswapV3Pool.Swaps.t.sol)中找到完整的测试。
 
-- When buying ETH:
+- 当购买 ETH 时：
     ```solidity
     function testBuyETHOnePriceRange() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
@@ -251,7 +250,7 @@ This is the scenario we had earlier. After we have updated the code, we need to 
         );
     }
     ```
-- When buying USDC:
+- 当购买 USDC 时：
     ```solidity
     function testBuyUSDCOnePriceRange() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](1);
@@ -275,15 +274,15 @@ This is the scenario we had earlier. After we have updated the code, we need to 
     }
     ```
 
-In both of these scenarios we buy a small amount of ETH or USDC–it needs to be small enough for the price to not leave the only price range we created. Key values after swapping is done:
-1. `sqrtPriceX96` is slightly above or below the initial price and stays within the price range;
-1. `currentLiquidity` remains unchanged.
+在这两种情况下，我们购买少量 ETH 或 USDC——它需要足够小，才能使价格不会超出我们创建的唯一价格范围。完成交易后的关键值：
+1. `sqrtPriceX96` 略高于或低于初始价格，并保持在价格范围内；
+2. `currentLiquidity` 保持不变。
 
-### Multiple Identical and Overlapping Price Ranges
+### 多个相同且重叠的价格范围
 
-![Swap within overlapping ranges](images/swap_within_overlapping_price_ranges.png)
+![在重叠范围内交易](images/swap_within_overlapping_price_ranges.png)
 
-- When buying ETH:
+- 当购买 ETH 时：
     ```solidity
     function testBuyETHTwoEqualPriceRanges() public {
         LiquidityRange memory range = liquidityRange(
@@ -315,7 +314,7 @@ In both of these scenarios we buy a small amount of ETH or USDC–it needs to be
     }
     ```
 
-- When buying USDC:
+- 当购买 USDC 时：
     ```solidity
     function testBuyUSDCTwoEqualPriceRanges() public {
         LiquidityRange memory range = liquidityRange(
@@ -347,13 +346,13 @@ In both of these scenarios we buy a small amount of ETH or USDC–it needs to be
     }
     ```
 
-This scenario is similar to the previous one but this time we create two identical price ranges. Since those are fully overlapping price ranges, they in fact act as one price range with a higher amount of liquidity. Thus, the price changes slower than in the previous scenario.  Also, we get slightly more tokens thanks to deeper liquidity.
+这种情况与前一种情况类似，但这次我们创建了两个相同的价格范围。由于这些是完全重叠的价格范围，因此它们实际上就像一个具有更高流动性数量的价格范围。因此，价格变化比前一种情况慢。此外，由于更深的流动性，我们获得了稍微更多的代币。
 
-### Consecutive Price Ranges
+### 连续的价格范围
 
-![Swap over consecutive price ranges](images/swap_consecutive_price_ranges.png)
+![跨越连续价格范围的交易](images/swap_consecutive_price_ranges.png)
 
-- When buying ETH:
+- 当购买 ETH 时：
     ```solidity
     function testBuyETHConsecutivePriceRanges() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](2);
@@ -377,7 +376,7 @@ This scenario is similar to the previous one but this time we create two identic
         );
     }
     ```
-- When buying USDC:
+- 当购买 USDC 时：
     ```solidity
     function testBuyUSDCConsecutivePriceRanges() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](2);
@@ -402,13 +401,13 @@ This scenario is similar to the previous one but this time we create two identic
     }
     ```
 
-In these scenarios, we make big swaps that cause the price to move outside of a price range. As a result, the second price range gets activated and provides enough liquidity to satisfy the swap. In both scenarios, we can see that the price lands outside of the current price range and that the price range gets deactivated (the current liquidity equals the liquidity of the second price range).
+在这些情况下，我们进行大的交易，导致价格超出价格范围。结果，第二个价格范围被激活，并提供足够的流动性来满足交易。在两种情况下，我们可以看到价格落在当前价格范围之外，并且价格范围被停用（当前流动性等于第二个价格范围的流动性）。
 
-### Partially Overlapping Price Ranges
+### 部分重叠的价格范围
 
-![Swap over partially overlapping price ranges](images/swap_partially_overlapping_price_ranges.png)
+![跨越部分重叠价格范围的交易](images/swap_partially_overlapping_price_ranges.png)
 
-- When buying ETH:
+- 当购买 ETH 时：
     ```solidity
     function testBuyETHPartiallyOverlappingPriceRanges() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](2);
@@ -433,7 +432,7 @@ In these scenarios, we make big swaps that cause the price to move outside of a 
     }
     ```
 
-- When buying USDC:
+- 当购买 USDC 时：
     ```solidity
     function testBuyUSDCPartiallyOverlappingPriceRanges() public {
         LiquidityRange[] memory liquidity = new LiquidityRange[](2);
@@ -458,6 +457,6 @@ In these scenarios, we make big swaps that cause the price to move outside of a 
     }
     ```
 
-This is a variation of the previous scenario, but this time the price ranges are partially overlapping. In the areas where the price ranges overlap, there's deeper liquidity, which makes the price movements slower. This is similar to providing more liquidity into the overlapping ranges.
+这是前一种情况的变体，但这次价格范围是部分重叠的。在价格范围重叠的区域中，有更深的流动性，这使得价格移动更慢。这类似于在重叠范围中提供更多的流动性。
 
-Also notice that, in both swaps, we got more tokens than in the "Consecutive Price Ranges" scenarios–this is again due to deeper liquidity in the overlapping ranges.
+另请注意，在两次交易中，我们都比“连续价格范围”情况下获得了更多的代币——这再次是由于重叠范围中更深的流动性所致。

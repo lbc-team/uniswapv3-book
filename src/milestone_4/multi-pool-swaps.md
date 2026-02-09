@@ -1,11 +1,11 @@
-# Multi-Pool Swaps
+# 多池交易
 
-We're now proceeding to the core of this milestone–implementing multi-pool swaps in our contracts. We won't touch the Pool contract in this milestone because it's a core contract that should implement only core features. Multi-pool swaps are a utility feature, and we'll implement it in the Manager and Quoter contracts.
+我们现在进入本里程碑的核心——在我们的合约中实现多池交易。在本里程碑中，我们不会触及 Pool 合约，因为它是一个核心合约，应该只实现核心功能。多池交易是一个实用功能，我们将在 Manager 和 Quoter 合约中实现它。
 
-## Updating the Manager Contract
+## 更新 Manager 合约
 
-### Single-Pool and Multi-Pool Swaps
-In our current implementation, the `swap` function in the Manager contract supports only single-pool swaps and takes pool address in parameters:
+### 单池和多池交易
+在我们当前的实现中，Manager 合约中的 `swap` 函数仅支持单池交易，并在参数中接收池地址：
 
 ```solidity
 function swap(
@@ -17,7 +17,7 @@ function swap(
 ) public returns (int256, int256) { ... }
 ```
 
-We're going to split it into two functions: single-pool swap and multi-pool swap. These functions will have different set of parameters:
+我们将把它分成两个函数：单池交易和多池交易。这些函数将有不同的参数集：
 
 ```solidity
 struct SwapSingleParams {
@@ -36,12 +36,12 @@ struct SwapParams {
 }
 ```
 
-1. `SwapSingleParams` takes pool parameters, input amount, and a limiting price–this is pretty much identical to what we had before. Notice, that `data` is no longer required.
-1. `SwapParams` takes path, output amount recipient, input amount, and minimal output amount. The latter parameter replaces `sqrtPriceLimitX96` because, when doing multi-pool swaps, we cannot use the slippage protection from the Pool contract (which uses a limiting price). We need to implement another slippage protection, which checks the final output amount and compares it with `minAmountOut`: the slippage protection fails when the final output amount is smaller than `minAmountOut`.
+1. `SwapSingleParams` 接收池参数、输入数量和一个限制价格——这与我们之前的非常相似。请注意，不再需要 `data`。
+2. `SwapParams` 接收路径、输出数量接收者、输入数量和最小输出数量。后一个参数取代了 `sqrtPriceLimitX96`，因为在进行多池交易时，我们不能使用来自 Pool 合约的滑点保护（它使用限制价格）。我们需要实现另一个滑点保护，它检查最终输出数量并将其与 `minAmountOut` 进行比较：当最终输出数量小于 `minAmountOut` 时，滑点保护失败。
 
-### Core Swapping Logic
+### 核心交易逻辑
 
-Let's implement an internal `_swap` function that will be called by both single- and multi-pool swap functions. It'll prepare parameters and call `Pool.swap`.
+让我们实现一个内部函数 `_swap`，它将被单池和多池交易函数调用。它将准备参数并调用 `Pool.swap`。
 
 ```solidity
 function _swap(
@@ -53,7 +53,7 @@ function _swap(
     ...
 ```
 
-`SwapCallbackData` is a new data structure that contains data we pass between swap functions and `uniswapV3SwapCallback`:
+`SwapCallbackData` 是一个新的数据结构，包含我们在交易函数和 `uniswapV3SwapCallback` 之间传递的数据：
 ```solidity
 struct SwapCallbackData {
     bytes path;
@@ -61,9 +61,9 @@ struct SwapCallbackData {
 }
 ```
 
-`path` is a swap path and `payer` is the address that provides input tokens in swaps–we'll have different payers during multi-pool swaps. 
+`path` 是交易路径，`payer` 是在交易中提供输入 token 的地址——在多池交易期间，我们将有不同的付款人。
 
-The first thing we do in `_swap`, is to extract pool parameters using the `Path` library:
+我们在 `_swap` 中做的第一件事是使用 `Path` 库提取池参数：
 
 ```solidity
 // function _swap(...) {
@@ -72,13 +72,13 @@ The first thing we do in `_swap`, is to extract pool parameters using the `Path`
     .decodeFirstPool();
 ```
 
-Then we identify swap direction:
+然后我们确定交易方向：
 
 ```solidity
 bool zeroForOne = tokenIn < tokenOut;
 ```
 
-Then we make the actual swap:
+然后我们进行实际的交易：
 ```solidity
 // function _swap(...) {
 (int256 amount0, int256 amount1) = getPool(
@@ -100,7 +100,7 @@ Then we make the actual swap:
     );
 ```
 
-This piece is identical to what we had before but this time we're calling `getPool` to find the pool. `getPool` is a function that sorts tokens and calls `PoolAddress.computeAddress`:
+这部分与我们之前的相同，但这次我们调用 `getPool` 来查找池。`getPool` 是一个对 token 进行排序并调用 `PoolAddress.computeAddress` 的函数：
 
 ```solidity
 function getPool(
@@ -117,17 +117,17 @@ function getPool(
 }
 ```
 
-After making a swap, we need to figure out which of the amounts is the output one:
+完成交易后，我们需要确定哪个数量是输出数量：
 ```solidity
 // function _swap(...) {
 amountOut = uint256(-(zeroForOne ? amount1 : amount0));
 ```
 
-And that's it. Let's now look at how a single-pool swap works.
+就是这样。现在让我们看看单池交易是如何进行的。
 
-### Single-Pool Swapping
+### 单池交易
 
-`swapSingle` acts simply as a wrapper of `_swap`:
+`swapSingle` 仅作为 `_swap` 的包装器：
 
 ```solidity
 function swapSingle(SwapSingleParams calldata params)
@@ -150,11 +150,11 @@ function swapSingle(SwapSingleParams calldata params)
 }
 ```
 
-Notice that we're building a one-pool path here: single-pool swap is a multi-pool swap with one pool 🙂.
+请注意，我们在这里构建了一个单池路径：单池交易是只有一个池的多池交易 🙂。
 
-### Multi-Pool Swapping
+### 多池交易
 
-Multi-pool swapping is only slightly more difficult than single-pool swapping. Let's look at it:
+多池交易仅比单池交易稍微困难一些。让我们来看看：
 
 ```solidity
 function swap(SwapParams memory params) public returns (uint256 amountOut) {
@@ -163,9 +163,9 @@ function swap(SwapParams memory params) public returns (uint256 amountOut) {
     ...
 ```
 
-The first swap is paid by the user because it's the user who provides input tokens.
+第一笔交易由用户支付，因为是用户提供输入 token。
 
-Then, we start iterating over pools in the path:
+然后，我们开始迭代路径中的池：
 
 ```solidity
 ...
@@ -184,13 +184,13 @@ while (true) {
     ...
 ```
 
-In each iteration, we're calling `_swap` with these parameters:
-1. `params.amountIn` tracks input amounts. During the first swap, it's the amount provided by the user. During the next swaps, it's the amounts returned from previous swaps.
-1. `hasMultiplePools ? address(this) : params.recipient`–if there are multiple pools in the path, the recipient is the Manager contract, it'll store tokens between swaps. If there's only one pool (the last one) in the path, the recipient is the one specified in the parameters (usually the same user that initiates the swap).
-1. `sqrtPriceLimitX96` is set to 0 to disable slippage protection in the Pool contract.
-1. The last parameter is what we pass to `uniswapV3SwapCallback`–we'll look at it shortly.
+在每次迭代中，我们都使用以下参数调用 `_swap`：
+1. `params.amountIn` 跟踪输入数量。在第一次交易期间，它是用户提供的数量。在接下来的交易中，它是从先前交易返回的数量。
+2. `hasMultiplePools ? address(this) : params.recipient`——如果路径中有多个池，则接收者是 Manager 合约，它将在交易之间存储 token。如果路径中只有一个池（最后一个池），则接收者是参数中指定的接收者（通常是发起交易的同一用户）。
+3. `sqrtPriceLimitX96` 设置为 0，以禁用 Pool 合约中的滑点保护。
+4. 最后一个参数是我们传递给 `uniswapV3SwapCallback` 的——我们稍后会看到它。
 
-After making one swap, we need to proceed to the next pool in a path or return:
+完成一次交易后，我们需要继续路径中的下一个池或返回：
 ```solidity
     ...
 
@@ -204,18 +204,18 @@ After making one swap, we need to proceed to the next pool in a path or return:
 }
 ```
 
-This is where we're changing payer and removing a processed pool from the path.
+这是我们更改付款人并从路径中删除已处理池的地方。
 
-Finally, the new slippage protection:
+最后，新的滑点保护：
 
 ```solidity
 if (amountOut < params.minAmountOut)
     revert TooLittleReceived(amountOut);
 ```
 
-### Swap Callback
+### 交易回调
 
-Let's look at the updated swap callback:
+让我们看一下更新后的交易回调：
 
 ```solidity
 function uniswapV3SwapCallback(
@@ -242,19 +242,19 @@ function uniswapV3SwapCallback(
 }
 ```
 
-The callback expects encoded `SwapCallbackData` with path and payer address. It extracts pool tokens from the path, figures out the swap direction (`zeroForOne`), and the amount the contract needs to transfer out. Then, it acts differently depending on the payer address:
-1. If the payer is the current contract (this is so when making consecutive swaps), it transfers tokens to the next pool (the one that called this callback) from the current contract's balance.
-1. If the payer is a different address (the user that initiated the swap), it transfers tokens from the user's balance.
+回调期望使用路径和付款人地址编码的 `SwapCallbackData`。它从路径中提取池 token，确定交易方向（`zeroForOne`）以及合约需要转出的数量。然后，它根据付款人地址采取不同的行动：
+1. 如果付款人是当前合约（在进行连续交易时是这样），它会将 token 从当前合约的余额转移到下一个池（调用此回调的池）。
+2. 如果付款人是不同的地址（发起交易的用户），它会将 token 从用户的余额中转移。
 
-## Updating the Quoter Contract
+## 更新 Quoter 合约
 
-Quoter is another contract that needs to be updated because we want to use it to also find output amounts in multi-pool swaps.  Similarly to Manager, we'll have two variants of the `quote` function: single-pool and multi-pool one. Let's look at the former first.
+Quoter 是另一个需要更新的合约，因为我们希望使用它来查找多池交易中的输出数量。与 Manager 类似，我们将有两个版本的 `quote` 函数：单池和多池函数。让我们首先看一下前者。
 
-### Single-pool Quoting
-We need to make only a couple of changes in our current `quote` implementation:
-1. rename it to `quoteSingle`;
-1. extract parameters into a struct (this is mostly a cosmetic change);
-1. instead of a pool address, take two token addresses and a tick spacing in the parameters.
+### 单池报价
+我们只需要对当前的 `quote` 实现进行一些更改：
+1. 将其重命名为 `quoteSingle`；
+2.  将参数提取到一个结构中（这主要是一个美观上的改变）；
+3.  在参数中，使用两个 token 地址和一个 tick 间距来代替池地址。
 
 ```solidity
 // src/UniswapV3Quoter.sol
@@ -277,7 +277,7 @@ function quoteSingle(QuoteSingleParams memory params)
     ...
 ```
 
-The only change we have in the body of the function is the usage of `getPool` to find the pool address:
+我们在函数主体中唯一的更改是使用 `getPool` 来查找池地址：
 ```solidity
     ...
     IUniswapV3Pool pool = getPool(
@@ -290,9 +290,9 @@ The only change we have in the body of the function is the usage of `getPool` to
     ...
 ```
 
-### Multi-pool Quoting
+### 多池报价
 
-Multi-pool quoting implementation is similar to the multi-pool swapping one, but it uses fewer parameters.
+多池报价实现类似于多池交易实现，但它使用的参数更少。
 
 ```solidity
 function quote(bytes memory path, uint256 amountIn)
@@ -308,7 +308,7 @@ function quote(bytes memory path, uint256 amountIn)
     ...
 ```
 
-As parameters, we only need an input amount and a swap path. The function returns similar values as `quoteSingle`, but "price after" and "tick after" are collected after each swap, thus we need to return arrays.
+作为参数，我们只需要输入数量和交易路径。该函数返回与 `quoteSingle` 类似的值，但“交易后的价格”和“交易后的 tick”是在每次交易后收集的，因此我们需要返回数组。
 
 ```solidity
 uint256 i = 0;
@@ -344,8 +344,8 @@ while (true) {
 }
 ```
 
-The logic of the loop is identical to the one in the updated `swap` function:
-1. get the current pool's parameters;
-1. call `quoteSingle` on the current pool;
-1. save returned values;
-1. repeat if there are more pools in the path, or return otherwise.
+循环的逻辑与更新后的 `swap` 函数中的逻辑相同：
+1. 获取当前池的参数；
+2. 在当前池上调用 `quoteSingle`；
+3. 保存返回值；
+4. 如果路径中有更多池，则重复，否则返回。

@@ -1,12 +1,12 @@
-# Overview of ERC721
+# ERC721 概述
 
-Let's begin with an overview of [EIP-721](https://eips.ethereum.org/EIPS/eip-721), the standard that defines NFT contracts.
+让我们从 [EIP-721](https://eips.ethereum.org/EIPS/eip-721) 的概述开始，这个标准定义了 NFT 合约。
 
-ERC721 is a variant of ERC20. The main difference between them is that ERC721 tokens are *non-fungible*, that is: one token is not identical to another. To distinguish ERC721 tokens, each of them has a unique ID, which is almost always the counter at which a token was minted. ERC721 tokens also have an extended concept of ownership: the owner of each token is tracked and stored in the contract. This means that only distinct tokens, identified by token IDs, can be transferred (or approved for transfer).
+ERC721 是 ERC20 的一个变体。它们之间的主要区别在于 ERC721 代币是 *非同质化* 的，也就是说：一个代币与另一个代币不相同。为了区分 ERC721 代币，每个代币都有一个唯一的 ID，这个 ID 几乎总是代币被铸造时的计数器。ERC721 代币也有一个扩展的所有权概念：每个代币的所有者都会被追踪并存储在合约中。这意味着只有由代币 ID 标识的不同代币才能被转移（或批准转移）。
 
-What Uniswap V3 liquidity positions and NFTs have in common is this non-fungibility: NFTs and liquidity positions are not interchangeable and are identified by unique IDs. It's this similarity that will allow us to merge the two concepts.
+Uniswap V3 流动性仓位和 NFT 的共同点在于这种非同质性：NFT 和流动性仓位不可互换，并通过唯一的 ID 标识。正是这种相似性将允许我们合并这两个概念。
 
-The biggest difference between ERC20 and ERC721 is the `tokenURI` function in the latter. NFT tokens, which are implemented as ERC721 smart contracts, have linked assets that are stored externally, not on the blockchain. To link token IDs to images (or sounds, or anything else) stored outside of the blockchain, ERC721 defines the `tokenURI` function. The function is expected to return a link to a JSON file that defines NFT token metadata, e.g.:
+ERC20 和 ERC721 之间最大的区别是后者中的 `tokenURI` 函数。作为 ERC721 智能合约实现的 NFT 代币，具有存储在外部而非区块链上的链接资产。为了将代币 ID 链接到存储在区块链之外的图像（或声音，或其他任何东西），ERC721 定义了 `tokenURI` 函数。该函数应返回一个指向 JSON 文件的链接，该文件定义了 NFT 代币元数据，例如：
 ```json
 {
     "name": "Thor's hammer",
@@ -15,10 +15,10 @@ The biggest difference between ERC20 and ERC721 is the `tokenURI` function in th
     "strength": 20
 }
 ```
-(This example is taken from the [ERC721 documentation on OpenZeppelin](https://docs.openzeppelin.com/contracts/4.x/erc721))
+（此示例取自 [OpenZeppelin 上的 ERC721 文档](https://docs.openzeppelin.com/contracts/4.x/erc721)）
 
-Such JSON file defines the name of a token, the description of a collection, the link to the image of a token, and the properties of a token.
+这样的 JSON 文件定义了代币的名称、集合的描述、代币图像的链接以及代币的属性。
 
-Alternatively, we may store JSON metadata and token images on-chain. This is very expensive of course (saving data on-chain is the most expensive operation in Ethereum), but we can make it cheaper if we store templates. All tokens within a collection have similar metadata (mostly identical but image links and properties are different for each token) and visuals. For the latter, we can use SVG, which is an HTML-like format, and HTML is a good templating language.
+或者，我们可以将 JSON 元数据和代币图像存储在链上。当然，这是非常昂贵的（在链上保存数据是以太坊中最昂贵的操作），但如果存储模板，我们可以使其更便宜。集合中的所有代币都具有相似的元数据（大部分相同，但图像链接和属性对于每个代币都不同）和视觉效果。对于后者，我们可以使用 SVG，这是一种类似 HTML 的格式，而 HTML 是一种很好的模板语言。
 
-When storing JSON metadata and SVG on-chain, the `tokenURI` function, instead of returning a link, would return JSON metadata directly, using the [data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme#Syntax) to encode it. SVG images would also be inlined, it won't be necessary to make external requests to download token metadata and images.
+当在链上存储 JSON 元数据和 SVG 时，`tokenURI` 函数将直接返回 JSON 元数据，而不是返回链接，使用 [data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme#Syntax) 对其进行编码。SVG 图像也将被内联，无需发出外部请求来下载代币元数据和图像。

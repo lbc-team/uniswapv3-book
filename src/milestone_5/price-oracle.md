@@ -1,60 +1,59 @@
-# Price Oracle
+# 价格预言机
 
-The final mechanism we're going to add to our DEX is a *price oracle*. Even though it's not essential to a DEX (some DEXes don't implement a price oracle), it's still an important feature of Uniswap and something interesting to learn about.
+我们将要添加到 DEX 的最后一个机制是*价格预言机*。 即使它对于 DEX 来说不是必需的（有些 DEX 没有实现价格预言机），但它仍然是 Uniswap 的一个重要功能，并且学习起来很有趣。
 
-## What is Price Oracle?
+## 什么是价格预言机？
 
-A price oracle is a mechanism that provides asset prices to the blockchain. Since blockchains are isolated ecosystems, there's no direct way of querying external data, e.g. fetching asset prices from centralized exchanges via API. Another, a very hard one, problem is data validity and authenticity: when fetching prices from an exchange, how do you know they're real?  You have to trust the source. But the internet is not often secure and, sometimes, prices can be manipulated, DNS records can be hijacked, API servers can go down, etc. All these difficulties need to be addressed so we can have reliable and correct on-chain prices.
+价格预言机是一种向区块链提供资产价格的机制。 由于区块链是孤立的生态系统，因此无法直接查询外部数据，例如通过 API 从中心化交易所获取资产价格。 另一个非常棘手的问题是数据的有效性和真实性：从交易所获取价格时，你怎么知道它们是真实的？ 你必须信任来源。 但是互联网通常不安全，有时价格可能会被操纵，DNS 记录可能会被劫持，API 服务器可能会崩溃等等。所有这些困难都需要解决，以便我们可以拥有可靠且正确的链上价格。
 
-One of the first working solutions to the above-mentioned problems was [Chainlink](https://chain.link/). Chainlink runs a decentralized network of oracles that fetch asset prices from centralized exchanges via APIs, average them, and provide them on-chain in a tamper-proof way. Chainlink is a set of contracts with one state variable, asset price, that can be read by anyone (any other contract or user) but can be written only by oracles.
+[Chainlink](https://chain.link/) 是解决上述问题的最早的工作方案之一。 Chainlink 运行一个去中心化的预言机网络，通过 API 从中心化交易所获取资产价格，对其进行平均，并以防篡改的方式在链上提供它们。 Chainlink 是一组合约，其中一个状态变量（资产价格）可以被任何人写（任何其他合约或用户）都可以读取，但只能由预言机写入。
 
-This is one way of looking at price oracles. There's another.
+这是看待价格预言机的一种方式。 还有另一种。
 
-If we have native on-chain exchanges, why would we need to fetch prices from outside? This is how the Uniswap price oracle works. Thanks to arbitraging and high liquidity, asset prices on Uniswap are close to those on centralized exchanges. So, instead of using centralized exchanges as the source of truth for asset prices, we can use Uniswap, and we don't need to solve the problems related to delivering data on-chain (we also don't need to trust data providers).
+如果我们有原生的链上交易所，为什么我们需要从外部获取价格？ 这就是 Uniswap 价格预言机的工作方式。 由于套利和高流动性，Uniswap 上的资产价格接近中心化交易所的价格。 因此，我们可以使用 Uniswap，而不是使用中心化交易所作为资产价格的来源，我们不需要解决与链上数据传输相关的问题（我们也不需要信任数据提供商）。
 
-## How Uniswap Price Oracle Works
+## Uniswap 价格预言机如何工作
 
-Uniswap simply keeps a record of all previous swap prices. That's it. But instead of tracking actual prices, Uniswap tracks the *accumulated price*, which is the sum of prices at each second in the history of a pool contract.
+Uniswap 只是保留了所有先前交换价格的记录。 仅此而已。 但是，Uniswap 不是跟踪实际价格，而是跟踪*累积价格*，它是池合约历史记录中每秒价格的总和。
 
 $$a_{i} = \sum_{i=1}^t p_{i}$$
 
-This approach allows us to find *time-weighted average price* between two points in time ($t_1$ and $t_2$) by simply getting the accumulated prices at these points ($a_{t_1}$ and $a_{t_2}$), subtracting one from the other, and dividing by the number of seconds between the two points:
+这种方法使我们能够通过简单地获取两个时间点（$t_1$ 和 $t_2$）的累积价格（$a_{t_1}$ 和 $a_{t_2}$），将一个时间点的累积价格减去另一个时间点的累积价格，然后除以两个时间点之间的秒数，来找到两个时间点之间的*时间加权平均价格*：
 
 $$p_{t_1,t_2} = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1}$$
 
-This is how it worked in Uniswap V2. In V3, it's slightly different. The accumulated price is the current tick (which is $log_{1.0001}$ of the price):
+这就是它在 Uniswap V2 中的工作方式。 在 V3 中，它略有不同。 累积价格是当前的 tick（它是价格的 $log_{1.0001}$）：
 
 $$a_{i} = \sum_{i=1}^t log_{1.0001}P(i)$$
 
-And instead of averaging prices, *geometric mean* is taken:
+并且不是对价格求平均，而是取*几何平均数*：
 
 $$ P_{t_1,t_2} = \left( \prod_{i=t_1}^{t_2} P_i \right) ^ \frac{1}{t_2-t_1} $$
 
-To find the time-weighted geometric mean price between two points in time, we take the accumulated values at these time points, subtract one from the other, divide by the number of seconds between the two points, and calculate $1.0001^{x}$:
+为了找到两个时间点之间的时间加权几何平均价格，我们获取这些时间点的累积值，将一个时间点的累积值减去另一个时间点的累积值，除以这两个时间点之间的秒数，然后计算 $1.0001^{x}$：
 
 $$ log_{1.0001}{(P_{t_1,t_2})} = \frac{\sum_{i=t_1}^{t_2} log_{1.0001}(P_i)}{t_2-t_1}$$
 $$ = \frac{a_{t_2} - a_{t_1}}{t_2-t_1}$$
 
 $$P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2-t_1}}$$
 
-Uniswap V2 didn't store historical accumulated prices, which required referring to a third-party blockchain data indexing service to find a historical price when calculating an average one. Uniswap V3, on the other hand, allows to store up to 65,535 historical accumulated prices, which makes it much easier to calculate any historical time-weighted geometric
-price.
+Uniswap V2 不存储历史累积价格，这需要参考第三方区块链数据索引服务才能在计算平均价格时找到历史价格。 另一方面，Uniswap V3 允许存储多达 65,535 个历史累积价格，这使得计算任何历史时间加权几何平均价格变得更加容易。
 
-## Price Manipulation Mitigation
+## 价格操纵缓解
 
-Another important topic is price manipulation and how it's mitigated in Uniswap.
+另一个重要的话题是价格操纵以及它在 Uniswap 中如何缓解。
 
-It's theoretically possible to manipulate a pool's price to your advantage: for example, buy a big amount of tokens to raise its price and get a profit on a third-party DeFi service that uses Uniswap price oracles, then trade the tokens back to the real price. To mitigate such attacks, Uniswap tracks prices **at the end of a block**, *after* the last trade of a block. This removes the possibility of in-block price manipulations.
+理论上，可以操纵池的价格来获得优势：例如，购买大量代币来提高其价格，并在使用 Uniswap 价格预言机的第三方 DeFi 服务上获利，然后将代币交易回真实价格。 为了减轻此类攻击，Uniswap 会跟踪**在一个区块结束时**的价格以及该区块的*最后*一笔交易**之后的**的价格。 这消除了区块内价格操纵的可能性。
 
-Technically, prices in the Uniswap oracle are updated at the beginning of each block, and each price is calculated before the first swap in a block.
+从技术上讲，Uniswap 预言机中的价格会在每个区块的开头更新，并且每个价格都会在该区块中的第一笔交换交易之前计算。
 
-## Price Oracle Implementation
+## 价格预言机实现
 
-Alright, let's get to code.
+好了，让我们开始编写代码。
 
-### Observations and Cardinality
+### 观察值和基数
 
-We'll begin by creating the `Oracle` library contract and the `Observation` structure:
+我们将首先创建 `Oracle` 库合约和 `Observation` 结构：
 
 ```solidity
 // src/lib/Oracle.sol
@@ -68,7 +67,7 @@ library Oracle {
 }
 ```
 
-*An observation* is a slot that stores a recorded price. It stores a price, the timestamp when this price was recorded, and the `initialized` flag that is set to `true` when the observation is activated (not all observations are activated by default). A pool contract can store up to 65,535 observations:
+*观察值*是一个存储记录价格的槽。 它存储一个价格、记录该价格的时间戳，以及在观察值被激活时设置为 `true` 的 `initialized` 标志（默认情况下并非所有观察值都被激活）。 一个池合约最多可以存储 65,535 个观察值：
 
 ```solidity
 // src/UniswapV3Pool.sol
@@ -79,7 +78,7 @@ contract UniswapV3Pool is IUniswapV3Pool {
 }
 ```
 
-However, since storing that many instances of `Observation` requires a lot of gas (someone would have to pay for writing each of them to the contract's storage), a pool by default can store only 1 observation, which gets overwritten each time a new price is recorded. The number of activated observations, the *cardinality* of observations, can be increased at any time by anyone willing to pay for that. To manage cardinality, we need a few extra state variables:
+但是，由于存储那么多 `Observation` 实例需要大量 gas（有人必须为将每个实例写入合约的存储空间付费），因此默认情况下，一个池只能存储 1 个观察值，每次记录新价格时，该观察值都会被覆盖。 可以随时由愿意为此付费的任何人增加已激活的观察值的数量（观察值的*基数*）。 为了管理基数，我们需要一些额外的状态变量：
 ```solidity
     ...
     struct Slot0 {
@@ -97,13 +96,13 @@ However, since storing that many instances of `Observation` requires a lot of ga
     ...
 ```
 
-- `observationIndex` tracks the index of the most recent observation;
-- `observationCardinality` tracks the number of activated observations;
-- `observationCardinalityNext` tracks the next cardinality the array of observations can expand to.
+- `observationIndex` 跟踪最近观察值的索引；
+- `observationCardinality` 跟踪已激活的观察值的数量；
+- `observationCardinalityNext` 跟踪观察值数组可以扩展到的下一个基数。
 
-Observations are stored in a fixed-length array that expands when a new observation is saved and `observationCardinalityNext` is greater than `observationCardinality` (which signals that cardinality can be expanded). If the array cannot be expanded (the next cardinality value equals the current one), the oldest observations get overwritten, i.e. observation is stored at index 0, the next one is stored at index 1, and so on.
+观察值存储在一个固定长度的数组中，当保存新的观察值并且 `observationCardinalityNext` 大于 `observationCardinality` 时，该数组会扩展（这表示可以扩展基数）。 如果该数组无法扩展（下一个基数值等于当前值），则最旧的观察值会被覆盖，即观察值存储在索引 0 处，下一个观察值存储在索引 1 处，依此类推。
 
-When a pool is created, `observationCardinality` and `observationCardinalityNext` are set to 1:
+创建池时，`observationCardinality` 和 `observationCardinalityNext` 将设置为 1：
 ```solidity
 // src/UniswapV3Pool.sol
 contract UniswapV3Pool is IUniswapV3Pool {
@@ -146,9 +145,9 @@ library Oracle {
 }
 ```
 
-### Writing Observations
+### 写入观察值
 
-In the `swap` function, when the current price is changed, an observation is written to the observations array:
+在 `swap` 函数中，当当前价格发生变化时，会将观察值写入观察值数组：
 
 ```solidity
 // src/UniswapV3Pool.sol
@@ -184,9 +183,9 @@ contract UniswapV3Pool is IUniswapV3Pool {
 }
 ```
 
-Notice that the tick that's observed here is `slot0_.tick` (not `state.tick`), i.e. the price before the swap! It's updated with a new price in the next statement. This is the price manipulation mitigation we discussed earlier: Uniswap tracks prices **before** the first trade in the block and **after** the last trade in the previous block.
+请注意，此处观察到的 tick 是 `slot0_.tick`（而不是 `state.tick`），即交换之前的价格！ 它会在下一个语句中使用新价格更新。 这就是我们之前讨论过的价格操纵缓解：Uniswap 跟踪一个区块中**第一笔**交易**之前**的价格以及**上一个**区块中**最后**一笔交易**之后**的价格。
 
-Also notice that each observation is identified by `_blockTimestamp()`, i.e. the current block timestamp. This means that if there's already an observation for the current block, a price is not recorded. If there are no observations for the current block (i.e. this is the first swap in the block), a price is recorded. This is part of the price manipulation mitigation mechanism.
+另请注意，每个观察值都由 `_blockTimestamp()` 标识，即当前的区块时间戳。 这意味着如果当前区块已经有一个观察值，则不会记录价格。 如果当前区块没有观察值（即这是区块中的第一笔交换交易），则会记录价格。 这是价格操纵缓解机制的一部分。
 
 ```solidity
 // src/lib/Oracle.sol
@@ -213,9 +212,9 @@ function write(
 }
 ```
 
-Here we see that an observation is skipped when there's already an observation made at the current block. If there's no such observation though, we're saving a new one and trying to expand the cardinality when possible. The modulo operator (`%`) ensures that the observation index stays within the range $[0, cardinality)$ and resets to 0 when the upper bound is reached.
+在这里，我们看到如果在当前区块中已经进行了观察，则会跳过观察。 但是，如果没有这样的观察，我们会保存一个新的观察，并尝试在可能的情况下扩展基数。 模运算符 (`%`) 确保观察索引保持在 $[0, cardinality)$ 范围内，并在达到上限时重置为 0。
 
-Now, let's look at the `transform` function:
+现在，让我们看一下 `transform` 函数：
 
 ```solidity
 function transform(
@@ -236,13 +235,13 @@ function transform(
 }
 ```
 
-What we're calculating here is the accumulated price: the current tick gets multiplied by the number of seconds since the last observation and gets added to the last accumulated price.
+我们在这里计算的是累积价格：当前 tick 乘以自上次观察以来的秒数，并添加到上次累积的价格中。
 
-### Increasing Cardinality
+### 增加基数
 
-Let's now see how cardinality is expanded.
+现在让我们看看如何扩展基数。
 
-Anyone at any time can increase the cardinality of observations of a pool and pay for the gas required to do so. For this, we'll add a new public function to the Pool contract:
+任何人都可以在任何时间增加池的观察值的基数，并支付执行该操作所需的 gas。 为此，我们将向 Pool 合约添加一个新的公共函数：
 
 ```solidity
 // src/UniswapV3Pool.sol
@@ -265,7 +264,7 @@ function increaseObservationCardinalityNext(
 }
 ```
 
-And a new function to Oracle:
+并在 Oracle 中添加一个新函数：
 
 ```solidity
 // src/lib/Oracle.sol
@@ -284,29 +283,28 @@ function grow(
 }
 ```
 
-In the `grow` function, we're allocating new observations by setting the `timestamp` field of each of them to some non-zero value. Notice that `self` is a storage variable, assigning values to its elements will update the array counter and write the values to the contract's storage.
+在 `grow` 函数中，我们通过将每个观察值的 `timestamp` 字段设置为一些非零值来分配新的观察值。 请注意，`self` 是一个存储变量，将值分配给它的元素会更新数组计数器并将值写入合约的存储空间。
 
-### Reading Observations
+### 读取观察值
 
-We've finally come to the trickiest part of this chapter: reading of observations. Before moving on, let's review how observations are stored to get a better picture.
+我们终于来到了本章中最棘手的部分：读取观察值。 在继续操作之前，让我们回顾一下观察值的存储方式，以便更好地了解。
 
-Observations are stored in a fixed-length array that can be expanded:
+观察值存储在一个可以扩展的固定长度的数组中：
 
-![Observations array](images/observations.png)
+![观察值数组](images/observations.png)
 
-As we noted above, observations are expected to overflow: if a new observation doesn't fit into the array, writing continues starting at index 0, i.e. oldest observations get overwritten:
+正如我们在上面所指出的，观察值预计会溢出：如果新的观察值不适合该数组，则写入将从索引 0 处开始继续写入，即最旧的观察值会被覆盖：
 
-![Observations wrapping](images/observations_wrapping.png)
+![观察值换行](images/observations_wrapping.png)
 
-There's no guarantee that an observation will be stored for every block because swaps don't happen in every block. Thus, there will be blocks that have no observations recorded, and such periods of missing observations can be long. Of course, we don't want to have gaps in the prices reported by the oracle, and this is why we're using time-weighted average prices (TWAP)–so we could have averaged prices in the periods where there were no observations. TWAP allows us to *interpolate* prices, i.e.  to draw a line between two observations–each point on the line will be a price at a specific timestamp between the two
-observations.
+不能保证每个区块都会存储一个观察值，因为并非每个区块都会发生交换。 因此，有些区块不会记录观察值，并且这种缺少观察值的时期可能会很长。 当然，我们不希望预言机报告的价格出现差距，这就是我们使用时间加权平均价格 (TWAP) 的原因——这样我们就可以在没有观察值的时期内获得平均价格。 TWAP 允许我们*插值*价格，即在两个观察值之间画一条线——该线上的每个点都是两个
+观察值之间特定时间戳的价格。
 
-![Interpolated prices](images/interpolated_prices.png)
+![内插价格](images/interpolated_prices.png)
 
+因此，读取观察值意味着按时间戳查找观察值并内插缺失的观察值，同时考虑到允许观察值数组溢出（例如，最旧的观察值可以在数组中位于最近的观察值之后）。 因为我们没有按时间戳索引观察值（为了节省 gas），所以我们需要使用[二分搜索算法](https://en.wikipedia.org/wiki/Binary_search_algorithm)进行高效搜索。 但并非总是如此。
 
-So, reading observations means finding observations by timestamps and interpolating missing observations, taking into consideration that the observations array is allowed to overflow (e.g. the oldest observation can come after the most recent one in the array). Since we're not indexing the observations by timestamps (to save gas), we'll need to use the [binary search algorithm](https://en.wikipedia.org/wiki/Binary_search_algorithm) for efficient search. But not always.
-
-Let's break it down into smaller steps and begin by implementing the `observe` function in `Oracle`:
+让我们将其分解为更小的步骤，并首先在 `Oracle` 中实现 `observe` 函数：
 
 ```solidity
 function observe(
@@ -332,9 +330,9 @@ function observe(
 }
 ```
 
-The function takes the current block timestamp, the list of time points we want to get prices at (`secondsAgo`), the current tick, the observations index, and the cardinality.
+该函数采用当前区块时间戳，我们想要获取价格的时间点列表 (`secondsAgo`)、当前 tick、观察索引和基数。
 
-Moving to the `observeSingle` function:
+移动到 `observeSingle` 函数：
 
 ```solidity
 function observeSingle(
@@ -354,14 +352,14 @@ function observeSingle(
 }
 ```
 
-When the most recent observation is requested (0 seconds passed), we can return it right away. If it wasn't recorded in the current block, transform it to consider the current block and the current tick.
+当请求最近的观察值（过去了 0 秒）时，我们可以立即返回它。 如果它没有记录在当前区块中，则转换它以考虑当前区块和当前 tick。
 
-If an older time point is requested, we need to make several checks before switching to the binary search algorithm:
-1. if the requested time point is the last observation, we can return the accumulated price at the latest observation;
-1. if the requested time point is after the last observation, we can call `transform`  to find the accumulated price at this point, knowing the last observed price and the current price;
-1. if the requested time point is before the last observation, we have to use the binary search.
+如果请求较旧的时间点，我们需要在切换到二分搜索算法之前进行多次检查：
+1. 如果请求的时间点是最后一个观察值，我们可以返回最新观察值的累积价格；
+1. 如果请求的时间点在最后一个观察值之后，我们可以调用 `transform` 来找到此时的累积价格，了解最后一个观察到的价格和当前价格；
+1. 如果请求的时间点在最后一个观察值之前，我们必须使用二分搜索。
 
-Let's go straight to the third point:
+让我们直接进入第三点：
 ```solidity
 function binarySearch(
     Observation[65535] storage self,
@@ -377,18 +375,18 @@ function binarySearch(
     ...
 ```
 
-The function takes the current block timestamp (`time`), the timestamp of the price point requested (`target`), as well as the current observations index and cardinality. It returns the range between two observations in which the requested time point is located.
+该函数采用当前区块时间戳 (`time`)、请求的价格点的时间戳 (`target`)，以及当前的观察索引和基数。 它返回请求的时间点所在的两个观察值之间的范围。
 
-To initialize the binary search algorithm, we set the boundaries:
+要初始化二分搜索算法，我们设置边界：
 ```solidity
 uint256 l = (index + 1) % cardinality; // oldest observation
 uint256 r = l + cardinality - 1; // newest observation
 uint256 i;
 ```
 
-Recall that the observations array is expected to overflow, that's why we're using the modulo operator here.
+回想一下，观察值数组预计会溢出，这就是我们在此处使用模运算符的原因。
 
-Then we spin up an infinite loop, in which we check the middle point of the range: if it's not initialized (there's no observation), we continue with the next point:
+然后我们启动一个无限循环，在其中我们检查范围的中间点：如果它没有初始化（没有观察值），我们继续下一个点：
 
 ```solidity
 while (true) {
@@ -404,7 +402,7 @@ while (true) {
     ...
 ```
 
-If the point is initialized, we call it the left boundary of the range we want the requested time point to be included. And we're trying to find the right boundary (`atOrAfter`):
+如果该点被初始化，我们称它为我们希望请求的时间点包含的范围的左边界。 我们正在尝试找到右边界 (`atOrAfter`)：
 
 ```solidity
     ...
@@ -416,7 +414,7 @@ If the point is initialized, we call it the left boundary of the range we want t
         break;
     ...
 ```
-If we've found the boundaries, we return them. If not, we continue our search:
+如果我们找到了边界，我们会返回它们。 如果没有，我们继续搜索：
 
 ```solidity
     ...
@@ -425,7 +423,7 @@ If we've found the boundaries, we return them. If not, we continue our search:
 }
 ```
 
-After finding a range of observations the requested time point belongs to, we need to calculate the price at the requested time point:
+在找到请求的时间点所属的观察值范围后，我们需要计算请求时间点的价格：
 ```solidity
 // function observeSingle() {
     ...
@@ -440,9 +438,9 @@ After finding a range of observations the requested time point belongs to, we ne
     ...
 ```
 
-This is as simple as finding the average rate of change within the range and multiplying it by the number of seconds that have passed between the lower bound of the range and the time point we need. This is the interpolation we discussed earlier.
+这就像找到该范围内平均变化率，并将其乘以范围下限和我们需要的时间点之间经过的秒数一样简单。 这就是我们之前讨论过的内插。
 
-The last thing we need to implement here is a public function in the Pool contract that reads and returns observations:
+我们这里需要实现的最后一件事是 Pool 合约中的一个读取和返回观察值的公共函数：
 
 ```solidity
 // src/UniswapV3Pool.sol
@@ -462,13 +460,13 @@ function observe(uint32[] calldata secondsAgos)
 }
 ```
 
-### Interpreting Observations
+### 解释观察值
 
-Let's now see how to interpret observations.
+现在让我们看看如何解释观察值。
 
-The `observe` function we just added returns an array of accumulated prices, and we want to know how to convert them to actual prices. I'll demonstrate this in a test of the `observe` function.
+我们刚刚添加的 `observe` 函数返回一个累积价格数组，我们想知道如何将它们转换为实际价格。 我将在 `observe` 函数的测试中演示这一点。
 
-In the test, I ran multiple swaps in different directions and at different blocks:
+在测试中，我在不同的方向和不同的区块中运行了多个交换：
 
 ```solidity
 function testObserve() public {
@@ -486,9 +484,9 @@ function testObserve() public {
     ...
 ```
 
-> `vm.warp` is a cheat code provided by Foundry: it forwards to a block with the specified timestamp. 2, 7, 20 – these are block timestamps.
+> `vm.warp` 是 Foundry 提供的一个作弊码：它转发到具有指定时间戳的区块。 2、7、20 – 这些是区块时间戳。
 
-The first swap is made at the block with timestamp 2, the second one is made at timestamp 7, and the third one is made at timestamp 20. We can then read the observations:
+第一次交换发生在时间戳为 2 的区块，第二次交换发生在时间戳为 7 的区块，第三次交换发生在时间戳为 20 的区块。 然后我们可以读取观察值：
 
 ```solidity
     ...
@@ -506,13 +504,13 @@ The first swap is made at the block with timestamp 2, the second one is made at 
     ...
 ```
 
-1. The earliest observed price is 0, which is the initial observation that's set when the pool is deployed. However, since the cardinality was set to 3 and we made 3 swaps, it was overwritten by the last observation.
-1. During the first swap, tick 85176 was observed, which is the initial price of the pool–recall that the price before a swap is observed. Because the very first observation was overwritten, this is the oldest observation now.
-1. The next returned accumulated price is 170370, which is `85176 + 85194`. The former is the previous accumulator value, the latter is the price after the first swap that was observed during the second swap.
-1. The next returned accumulated price is 511146, which is `(511146 - 170370) / (17 - 13) = 85194`, the accumulated price between the second and the third swap.
-1. Finally, the most recent observation is 1607059, which is `(1607059 - 511146) / (20 - 7) = 84301`, which is ~4581 USDC/ETH, the price after the second swap that was observed during the third swap.
+1. 最早观察到的价格为 0，这是部署池时设置的初始观察值。 但是，由于基数设置为 3，并且我们进行了 3 次交换，因此它被最后一次观察覆盖。
+1. 在第一次交换期间，观察到 tick 85176，这是池的初始价格——回想一下，观察到交换之前的价格。 由于第一个观察值被覆盖，因此现在这是最旧的观察值。
+1. 下一个返回的累积价格是 170370，即 `85176 + 85194`。 前者是先前的累加器值，后者是第一次交换之后的在第二次交换期间观察到的价格。
+1. 下一个返回的累积价格是 511146，即 `(511146 - 170370) / (17 - 13) = 85194`，即第二次和第三次交换之间的累积价格。
+1. 最后，最近的观察值是 1607059，即 `(1607059 - 511146) / (20 - 7) = 84301`，约为 4581 USDC/ETH，这是在第三次交换期间观察到的第二次交换后的价格。
 
-Here's an example that involves interpolation: the time points requested are not the time points of the swaps:
+这是一个涉及内插的示例：请求的时间点不是交换的时间点：
 
 ```solidity
 secondsAgos = new uint32[](5);
@@ -530,9 +528,9 @@ assertEq(tickCumulatives[3], 340758);
 assertEq(tickCumulatives[4], 85176);
 ```
 
-This results in prices: 4581.03, 4581.03, 4747.6, and 5008.91, which are the average prices within the requested intervals.
+这会产生以下价格：4581.03、4581.03、4747.6 和 5008.91，这些是请求的间隔内的平均价格。
 
-> Here's how to compute those values in Python:
+> 以下是如何在 Python 中计算这些值：
 > ```python
 > vals = [1607059, 1185554, 764049, 340758, 85176]
 > secs = [0, 5, 10, 15, 18]
