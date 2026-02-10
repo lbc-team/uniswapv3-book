@@ -83,13 +83,13 @@ $$\Delta x = \frac{x \Delta y}{r(y - \Delta y)}$$
 
 当绘制时，恒定乘积函数是一个二次双曲线：
 
-![恒定乘积公式曲线的形状](images/the_curve.png)
+![恒定乘积公式曲线的形状](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/the_curve.png)
 
 其中轴是池的储备金。每笔交易都从曲线上对应于当前储备金比率的点开始。要计算输出量，我们需要在曲线上找到一个新点，该点的 $x$ 坐标为 $x+\Delta x$，即代币 0 的当前储备金 + 我们正在出售的数量。$y$ 的变化是我们将获得的代币 1 的数量。
 
 让我们看一个具体的例子：
 
-![Desmos 图表示例](images/desmos.png)
+![Desmos 图表示例](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/desmos.png)
 
 1. 紫色线是曲线，轴是池的储备金（注意它们以起始价格相等）。
 1. 起始价格是 1。

@@ -10,7 +10,7 @@
 
 让我们分析一下这个图示：
 
-![价格范围的动态](images/price_range_dynamics.png)
+![价格范围的动态](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/price_range_dynamics.png)
 
 此图中有三个价格范围。最上面的一个（top one）是当前正在使用的，它包含当前价格。此价格范围的流动性设置为 Pool 合约的 `liquidity` 状态变量。
 
@@ -221,7 +221,7 @@ function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
 
 ### 一个价格范围
 
-![在价格范围内交易](images/swap_within_price_range.png)
+![在价格范围内交易](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/swap_within_price_range.png)
 
 这是我们之前的情况。在更新代码后，我们需要确保旧功能保持正常工作。
 
@@ -280,7 +280,7 @@ function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
 
 ### 多个相同且重叠的价格范围
 
-![在重叠范围内交易](images/swap_within_overlapping_price_ranges.png)
+![在重叠范围内交易](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/swap_within_overlapping_price_ranges.png)
 
 - 当购买 ETH 时：
     ```solidity
@@ -350,7 +350,7 @@ function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
 
 ### 连续的价格范围
 
-![跨越连续价格范围的交易](images/swap_consecutive_price_ranges.png)
+![跨越连续价格范围的交易](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/swap_consecutive_price_ranges.png)
 
 - 当购买 ETH 时：
     ```solidity
@@ -405,7 +405,7 @@ function cross(mapping(int24 => Tick.Info) storage self, int24 tick)
 
 ### 部分重叠的价格范围
 
-![跨越部分重叠价格范围的交易](images/swap_partially_overlapping_price_ranges.png)
+![跨越部分重叠价格范围的交易](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/swap_partially_overlapping_price_ranges.png)
 
 - 当购买 ETH 时：
     ```solidity

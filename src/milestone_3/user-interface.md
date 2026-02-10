@@ -6,7 +6,7 @@
 
 ## 添加流动性对话框
 
-![添加流动性对话框窗口](images/add_liquidity_dialog.png)
+![添加流动性对话框窗口](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/add_liquidity_dialog.png)
 
 此更改最终将从我们的代码中删除硬编码的流动性数量，并允许我们在任意范围内添加流动性。
 
@@ -44,7 +44,7 @@ const amount1Min = amount1Desired.mul((100 - slippage) * 100).div(10000);
 
 即使我们是应用程序的唯一用户，因此在开发过程中永远不会遇到滑点问题，让我们添加一个输入来控制交易期间的滑点容忍度。
 
-![Web 应用程序的主屏幕](images/slippage_tolerance.png)
+![Web 应用程序的主屏幕](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/slippage_tolerance.png)
 
 交易时，滑点保护通过限制价格来实现——我们不希望在交易期间高于或低于的价格。 这意味着我们需要在发送交易交易之前知道这个价格。 但是，我们不需要在前端计算它，因为 Quoter 合约会为我们做这件事：
 

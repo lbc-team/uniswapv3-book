@@ -10,7 +10,7 @@
 
 从视觉上看，这个模型看起来像这样：
 
-![购买 USDC 的 ETH 可视化](images/buy_eth_model.png)
+![购买 USDC 的 ETH 可视化](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/buy_eth_model.png)
 
 在开始编写代码之前，让我们先弄清楚数学，并计算模型的所有参数。为了简化，我将在 Solidity 中实现它们之前，先用 Python 进行数学计算。这将使我们能够专注于数学，而无需深入研究 Solidity 中数学的细微差别。这也意味着，在智能合约中，我们将硬编码所有的金额。这将使我们能够从一个简单的最小可行产品开始。
 

@@ -6,7 +6,7 @@
 
 ## 如何收取兑换费用
 
-![流动性范围和费用](images/liquidity_ranges_fees.png)
+![流动性范围和费用](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/liquidity_ranges_fees.png)
 
 兑换费用仅在价格范围被激活（用于交易）时才会被收取。因此，我们需要跟踪价格范围边界被跨越的时刻。这就是价格范围被激活的时刻，也是我们想要开始为其收取费用的时刻：
 1. 当价格上涨并且从左到右跨越一个 tick 时；
@@ -16,7 +16,7 @@
 1. 当价格上涨并且从右到左跨越一个 tick 时；
 1. 当价格下跌并且从左到右跨越一个 tick 时。
 
-![流动性范围激活/解除激活](images/liquidity_range_engaged.png)
+![流动性范围激活/解除激活](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/liquidity_range_engaged.png)
 
 除了知道价格范围何时被激活/解除激活之外，我们还希望跟踪每个价格范围累积了多少费用。
 
@@ -39,7 +39,7 @@
 
 当当前价格在该仓位内时，我们减去到目前为止在 tick 之外收取的费用：
 
-![在价格范围内外应计的费用](images/fees_inside_and_outside_price_range.png)
+![在价格范围内外应计的费用](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/fees_inside_and_outside_price_range.png)
 
 当当前价格在该仓位之外时，我们需要在从全局收取的费用中减去它们之前，更新上限或下限 tick 收取的费用。我们仅针对计算更新它们，而不在 ticks 中覆盖它们，因为 ticks 没有被跨越。
 

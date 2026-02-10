@@ -32,7 +32,7 @@ contract UniswapV3Pool {
 
 这是一个映射，其中键是 `int16`，值是 words (`uint256`)。想象一个由 1 和 0 组成的无限连续数组：
 
-![Tick indexes in tick bitmap](images/tick_bitmap.png)
+![Tick indexes in tick bitmap](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_2/images/tick_bitmap.png)
 
 此数组中的每个元素对应于一个 tick。要在此数组中导航，我们将其分解为 words：长度为 256 位的子数组。要找到 tick 在此数组中的位置，我们执行以下操作：
 
@@ -106,7 +106,7 @@ print(format(word ^ mask, '#0258b'))                                      ↓ �
 
 这对应于在任一方向进行互换时的价格变动：
 
-![Finding next initialized tick during a swap](images/find_next_tick.png)
+![Finding next initialized tick during a swap](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_2/images/find_next_tick.png)
 
 > 请注意，在代码中，方向已翻转：当购买 token $x$ 时，我们搜索当前**左侧**的已初始化 tick；当出售 token $x$ 时，我们搜索**右侧**的 tick。但这仅在 word 中成立；word 从左到右排序。
 

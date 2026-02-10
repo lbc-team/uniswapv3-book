@@ -37,7 +37,7 @@ function mint() {
 
 在交易中，限价订单是指当价格穿过交易者选择的水平时执行的订单。例如，您可以设置一个限价订单，当 ETH 的价格降至 \$1000 时购买 1 个 ETH。同样，您可以使用限价订单出售资产。通过 Uniswap V3，您可以通过在低于或高于当前价格的范围内放置流动性来获得类似的行为。让我们看看这是如何运作的：
 
-![当前价格之外的流动性范围](images/ranges_outside_current_price.png)
+![当前价格之外的流动性范围](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_3/images/ranges_outside_current_price.png)
 
 如果您在当前价格之下（即您选择的价格范围完全低于当前价格）或之上提供流动性，那么您的全部流动性将仅由**一种资产**组成——该资产将是两种资产中较便宜的一种。在我们的示例中，我们正在构建一个以 ETH 作为 token $x$，USDC 作为 token $y$ 的池子，并将价格定义为：
 
@@ -47,7 +47,7 @@ $$P = \frac{y}{x}$$
 
 回想一下引言中的这张图：
 
-![价格范围耗尽](../milestone_1/images/range_depleted.png)
+![价格范围耗尽](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/range_depleted.png)
 
 如果我们从这个范围购买所有可用的 ETH，该范围将只包含另一种 token，USDC，并且价格将向曲线的右侧移动。正如我们定义的价格（$\frac{y}{x}$）将**增加**。如果在这个范围的右边有一个价格范围，它需要有 ETH 流动性，并且只有 ETH，而不是 USDC：它需要为下一次交换提供 ETH。如果我们继续购买并提高价格，我们也可能“耗尽”下一个价格范围，这意味着购买其所有的 ETH 并出售 USDC。同样，价格范围最终只包含 USDC，并且当前价格移到范围之外。
 

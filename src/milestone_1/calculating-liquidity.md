@@ -95,7 +95,7 @@ $$L = \sqrt{xy}$$
 
 要计算价格范围的 $L$，让我们看一下我们之前讨论过的一个有趣的事实：价格范围可能会耗尽。 可以从价格范围中购买一种 token 的全部数量，并使池中仅剩下另一种 token。
 
-![范围耗尽示例](images/range_depleted.png)
+![范围耗尽示例](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/range_depleted.png)
 
 在 $a$ 和 $b$ 点，该范围内只有一种 token：$a$ 点的 ETH 和 $b$ 点的 USDC。
 
@@ -111,7 +111,7 @@ $$L = \sqrt{xy}$$
 
 因此，曲线段中当前价格左侧的流动性仅由 token $x$ 组成，并且仅从提供的 token $x$ 的数量计算得出。 类似地，曲线段中当前价格右侧的流动性仅由 token $y$ 组成，并且仅从提供的 token $y$ 的数量计算得出。
 
-![曲线上的流动性](images/curve_liquidity.png)
+![曲线上的流动性](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/curve_liquidity.png)
 
 这就是为什么在提供流动性时，我们要计算两个 $L$ 并选择其中之一。 哪一个？ 较小的一个。 为什么？ 因为较大的一个已经包含了较小的一个！ 我们希望新的流动性**均匀地**分布在曲线上，因此我们希望在当前价格的左侧和右侧添加相同的 $L$。 如果我们选择较大的一个，则用户将需要提供更多的流动性来补偿较小的数量的不足。 这当然是可行的，但是这会使智能合约更加复杂。
 

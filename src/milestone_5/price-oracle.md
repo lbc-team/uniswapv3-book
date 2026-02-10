@@ -291,16 +291,16 @@ function grow(
 
 观察值存储在一个可以扩展的固定长度的数组中：
 
-![观察值数组](images/observations.png)
+![观察值数组](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/observations.png)
 
 正如我们在上面所指出的，观察值预计会溢出：如果新的观察值不适合该数组，则写入将从索引 0 处开始继续写入，即最旧的观察值会被覆盖：
 
-![观察值换行](images/observations_wrapping.png)
+![观察值换行](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/observations_wrapping.png)
 
 不能保证每个区块都会存储一个观察值，因为并非每个区块都会发生交换。 因此，有些区块不会记录观察值，并且这种缺少观察值的时期可能会很长。 当然，我们不希望预言机报告的价格出现差距，这就是我们使用时间加权平均价格 (TWAP) 的原因——这样我们就可以在没有观察值的时期内获得平均价格。 TWAP 允许我们*插值*价格，即在两个观察值之间画一条线——该线上的每个点都是两个
 观察值之间特定时间戳的价格。
 
-![内插价格](images/interpolated_prices.png)
+![内插价格](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_5/images/interpolated_prices.png)
 
 因此，读取观察值意味着按时间戳查找观察值并内插缺失的观察值，同时考虑到允许观察值数组溢出（例如，最旧的观察值可以在数组中位于最近的观察值之后）。 因为我们没有按时间戳索引观察值（为了节省 gas），所以我们需要使用[二分搜索算法](https://en.wikipedia.org/wiki/Binary_search_algorithm)进行高效搜索。 但并非总是如此。
 

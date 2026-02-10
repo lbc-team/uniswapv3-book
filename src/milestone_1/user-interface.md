@@ -2,7 +2,7 @@
 
 终于，我们到达了此里程碑的最后一站——构建用户界面！
 
-![UI应用程序的界面](images/ui.png)
+![UI应用程序的界面](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/ui.png)
 
 由于构建前端应用程序不是本书的主要目标，因此我不会展示如何从头开始构建这样的应用程序。相反，我将展示如何使用 MetaMask 与智能合约交互。
 
@@ -16,7 +16,7 @@ MetaMask 是一个作为浏览器扩展实现的以太坊钱包。 它创建并�
 
 除此之外，MetaMask 充当签名者和提供者。 作为提供者，它连接到以太坊节点并提供一个接口来使用其 JSON-RPC API。 作为签名者，它提供了一个用于安全交易签名的接口，因此它可用于使用钱包中的私钥签署任何交易。
 
-![MetaMask 如何工作](images/metamask.png)
+![MetaMask 如何工作](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/metamask.png)
 
 ### 便捷库
 
@@ -66,7 +66,7 @@ const connect = () => {
 
 `eth_chainId` 将请求 MetaMask 连接的节点的链 ID。 在获得地址和链 ID 之后，最好在界面中显示它们：
 
-![MetaMask 已连接](images/ui_metamask_connected.png)
+![MetaMask 已连接](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_1/images/ui_metamask_connected.png)
 
 ### 提供流动性
 

@@ -13,7 +13,7 @@ Uniswap V2 是一个通用的交易所，它实现了一种 AMM 算法。然而�
 
 造成这个问题的原因是 Uniswap V2 池中的流动性是无限分布的——池流动性允许在任何价格下进行交易，从 0 到无穷大：
 
-![曲线是无限的](images/curve_infinite.png)
+![曲线是无限的](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/curve_infinite.png)
 
 这可能看起来不是一件坏事，但这使得资本效率低下。资产的历史价格保持在某个定义的范围内，无论是窄范围还是宽范围。例如，ETH 的历史价格范围是从 0.75 美元到 4,800 美元（根据 [CoinMarketCap](https://coinmarketcap.com/currencies/ethereum/)）。今天（2022 年 6 月，1 个 ETH 的价格为 1,800 美元），没有人会以 5000 美元的价格购买 1 个以太币，因此在这个价格提供流动性是没有意义的。因此，在远离当前价格或永远无法达到的价格范围内提供流动性是没有意义的。
 
@@ -27,7 +27,7 @@ Uniswap V3 引入了 *集中流动性*：流动性提供者现在可以选择他
 
 现在，让我们尝试将其可视化。我们想说的是，我们不希望曲线是无限的。我们在 $a$ 和 $b$ 点将其截断，并说这些是曲线的边界。此外，我们移动曲线，使边界位于轴上。这就是我们得到的：
 
-![Uniswap V3 价格范围](images/curve_finite.png)
+![Uniswap V3 价格范围](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/curve_finite.png)
 
 > 它看起来很孤单，不是吗？这就是为什么 Uniswap V3 中存在许多价格范围——这样它们就不会感到孤单🙂
 
@@ -41,7 +41,7 @@ Uniswap V3 引入了 *集中流动性*：流动性提供者现在可以选择他
 
 这是流动性在 [生产中的 USDC/ETH 池](https://info.uniswap.org/#/pools/0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8) 中分布的方式：
 
-![真实 USDC/ETH 池中的流动性](images/usdceth_liquidity.png)
+![真实 USDC/ETH 池中的流动性](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/usdceth_liquidity.png)
 
 你可以看到，当前价格附近有很多流动性，但离它越远，流动性就越少——这是因为流动性提供者努力提高其资本的效率。此外，整个范围不是无限的，其上限显示在图像中。
 
@@ -96,7 +96,7 @@ $L$ 和 $\sqrt{P}$ 允许我们不存储和更新池储备。此外，我们不�
 
 正如我们在本章中所了解的那样，V2 的无限价格范围在 V3 中被分成较短的价格范围。每个较短的价格范围都受到边界的限制——上限和下限。为了跟踪这些边界的坐标，Uniswap V3 使用 *ticks*（价格跳动）。
 
-![价格范围和价格跳动](images/ticks_and_ranges.png)
+![价格范围和价格跳动](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_0/images/ticks_and_ranges.png)
 
 在 V3 中，整个价格范围由均匀分布的离散价格跳动来划分。每个价格跳动都有一个索引，对应于某个价格：
 

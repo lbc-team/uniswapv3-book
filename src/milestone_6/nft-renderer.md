@@ -6,7 +6,7 @@
 
 我构建了这个 Uniswap V3 NFT 的简化版本：
 
-![NFT token 的 SVG 模板](images/nft_template.png)
+![NFT token 的 SVG 模板](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_6/images/nft_template.png)
 
 这是它的代码：
 ```svg
@@ -58,8 +58,8 @@
 
 以下是我们的合约将能够生成的 NFT 示例：
 
-![NFT 示例 1](images/nft_example_2.png)
-![NFT 示例 2](images/nft_example_3.png)
+![NFT 示例 1](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_6/images/nft_example_2.png)
+![NFT 示例 2](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_6/images/nft_example_3.png)
 
 ## 依赖项
 

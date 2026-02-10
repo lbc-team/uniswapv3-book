@@ -12,13 +12,13 @@ Uniswap 实现了所谓的 *AutoRouter*，这是一种寻找两个 token 之间�
 
 假设我们有一大堆池子：
 
-![分散的池子](images/pools_scattered.png)
+![分散的池子](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_4/images/pools_scattered.png)
 
 我们如何在这种混乱中找到两个 token 之间的最短路径？
 
 对于这种类型的任务，最合适的解决方案是基于 *图*。图是一种数据结构，由节点（代表某些东西的对象）和边（连接节点的链接）组成。我们可以将这些混乱的池子变成一个图，其中每个节点是一个 token（拥有一个池子），每条边是该 token 所属的池子。因此，一个表示为图的池子是两个用一条边连接的节点。上面的池子变成了这张图：
 
-![池子图](images/pools_graph.png)
+![池子图](https://img.learnblockchain.cn/how_to_defi/uniswapv3/src/milestone_4/images/pools_graph.png)
 
 图给我们的最大优势是能够遍历其节点，从一个节点到另一个节点，以找到路径。具体来说，我们将使用 [A* 搜索算法](https://en.wikipedia.org/wiki/A*_search_algorithm)。可以随意了解该算法的工作原理，但是，在我们的应用程序中，我们将使用一个库来简化我们的生活。我们将使用 [ngraph.ngraph](https://github.com/anvaka/ngraph.graph) 来构建图，并使用 [ngraph.path](https://github.com/anvaka/ngraph.path) 来查找路径（后者实现了 A* 搜索算法以及其他一些算法）。
 
